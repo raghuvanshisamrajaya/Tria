@@ -478,7 +478,135 @@ body {
     <div>Ahmedabad</div>
   </div>
 </div>  
+<!-- Cookie Consent Card -->
+<div class="card" id="cookieConsent" style="display: none;">
+  <svg xml:space="preserve" viewBox="0 0 122.88 122.25" y="0px" x="0px" id="cookieSvg" version="1.1">
+    <g>
+      <path d="M101.77,49.38c2.09,3.1..."></path>
+    </g>
+  </svg>
+  <p class="cookieHeading">We use cookies.</p>
+  <p class="cookieDescription">
+    We use cookies to ensure that we give you the best experience on our website. <br>
+    <a href="cookies.html">Read cookies policies</a>.
+  </p>
+  <div class="buttonContainer">
+    <button class="acceptButton" onclick="acceptCookies()">Allow</button>
+    <button class="declineButton" onclick="declineCookies()">Decline</button>
+  </div>
+</div>
 
+<!-- Style from Uiverse -->
+<style>
+.card {
+  width: 300px;
+  height: 220px;
+  background-color: white;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 30px;
+  gap: 13px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.062);
+}
+
+#cookieSvg {
+  width: 50px;
+}
+#cookieSvg g path {
+  fill: rgb(97, 81, 81);
+}
+.cookieHeading {
+  font-size: 1.2em;
+  font-weight: 800;
+  color: rgb(26, 26, 26);
+}
+.cookieDescription {
+  text-align: center;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: rgb(99, 99, 99);
+}
+.cookieDescription a {
+  color: rgb(59 130 246);
+}
+.cookieDescription a:hover {
+  text-decoration-line: underline;
+}
+.buttonContainer {
+  display: flex;
+  gap: 20px;
+  flex-direction: row;
+}
+.acceptButton {
+  width: 80px;
+  height: 30px;
+  background-color: #7b57ff;
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px #977ef3;
+  transition: all .3s ease;
+}
+.acceptButton:hover {
+  background-color: #9173ff;
+}
+.declineButton {
+  width: 80px;
+  height: 30px;
+  background-color: #dadada;
+  color: #2e2e2e;
+  border: none;
+  font-weight: 600;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px #bebdbd;
+  transition: all .3s ease;
+}
+.declineButton:hover {
+  background-color: #ebebeb;
+}
+</style>
+
+<!-- JavaScript -->
+<script>
+// Check if cookie already accepted
+window.onload = function () {
+  if (!getCookie("cookieConsent")) {
+    document.getElementById("cookieConsent").style.display = "flex";
+  }
+};
+
+// Set cookie when user clicks "Allow"
+function acceptCookies() {
+  document.cookie = "cookieConsent=true; path=/; max-age=" + 60 * 60 * 24 * 30; // 30 days
+  document.getElementById("cookieConsent").style.display = "none";
+}
+
+// Just hide when user clicks "Decline"
+function declineCookies() {
+  document.getElementById("cookieConsent").style.display = "none";
+}
+
+// Get cookie by name
+function getCookie(name) {
+  let cookies = document.cookie.split(';');
+  for (let c of cookies) {
+    let [key, value] = c.trim().split('=');
+    if (key === name) return value;
+  }
+  return null;
+}
+</script>
     <footer style="background: #004e89; color: #fff; padding: 3rem 2rem; font-family: 'Inter', sans-serif;">
   <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2rem; max-width: 1200px; margin: auto;">
     <!-- Company Info -->
