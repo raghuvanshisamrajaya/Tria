@@ -1,112 +1,116 @@
 // auth.js
 
-// SIGN UP with Role, Email Verification, Firestore user data
-async function signUp(name, email, password, role = "user") {
-  try {
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-    const uid = user.uid;
+// Firebase SDK imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    // Store user data in Firestore
-    await db.collection("users").doc(uid).set({
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyAbknkfD6Je1a3wDZRTzn6lC62CNUhhwLc",
+  authDomain: "store-471f1.firebaseapp.com",
+  projectId: "store-471f1",
+  storageBucket: "store-471f1.firebasestorage.app",
+  messagingSenderId: "619523242611",
+  appId: "1:619523242611:web:fdfa53044c62f844574806",
+  measurementId: "G-16C8MYT70G"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ✅ Sign Up (Default role = "user")
+export async function signUpUser(name, email, password, role = "user") {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    await setDoc(doc(db, "users", user.uid), {
       name,
       email,
       role,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: serverTimestamp()
     });
 
-    // Send email verification
-    await user.sendEmailVerification();
-
-    return { success: true, message: "Signup successful. Please verify your email.", uid };
+    return { success: true, uid: user.uid, role };
   } catch (error) {
-    console.error("Signup Error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// LOGIN and fetch role
-async function login(email, password) {
+// ✅ Login
+export async function loginUser(email, password) {
   try {
-    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const role = userDoc.exists() ? userDoc.data().role : null;
 
-    if (!user.emailVerified) {
-      return { success: false, error: "Please verify your email before logging in." };
-    }
-
-    const uid = user.uid;
-    const userDoc = await db.collection("users").doc(uid).get();
-
-    if (!userDoc.exists) {
-      return { success: false, error: "User data not found in Firestore." };
-    }
-
-    const userData = userDoc.data();
-    return { success: true, uid, role: userData.role };
+    return { success: true, uid: user.uid, role };
   } catch (error) {
-    console.error("Login Error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// LOGOUT
-async function logout() {
+// ✅ Logout
+export async function logoutUser() {
   try {
-    await auth.signOut();
+    await signOut(auth);
     return { success: true };
   } catch (error) {
-    console.error("Logout Error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// CHECK CURRENT USER
-function getCurrentUser() {
-  return auth.currentUser;
-}
-
-// RESET PASSWORD (email link)
-async function resetPassword(email) {
+// ✅ Create Booking
+export async function createBooking(data) {
   try {
-    await auth.sendPasswordResetEmail(email);
-    return { success: true, message: "Reset link sent to your email." };
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    await addDoc(collection(db, "bookings"), {
+      ...data,
+      userId: user.uid,
+      status: "pending",
+      createdAt: serverTimestamp()
+    });
+
+    return { success: true };
   } catch (error) {
-    console.error("Password Reset Error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// SEND VERIFICATION EMAIL (if needed)
-async function resendVerificationEmail() {
-  const user = auth.currentUser;
-  if (user && !user.emailVerified) {
-    try {
-      await user.sendEmailVerification();
-      return { success: true, message: "Verification email sent." };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  } else {
-    return { success: false, error: "User not found or already verified." };
+// ✅ Get Bookings for Current User
+export async function getMyBookings() {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    const q = query(collection(db, "bookings"), where("userId", "==", user.uid));
+    const querySnapshot = await getDocs(q);
+    const bookings = [];
+    querySnapshot.forEach(doc => {
+      bookings.push({ id: doc.id, ...doc.data() });
+    });
+
+    return { success: true, bookings };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }
 
-// REDIRECT BY ROLE
-async function redirectUserByRole() {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  const userDoc = await db.collection("users").doc(user.uid).get();
-  const role = userDoc.data()?.role;
-
-  if (role === "admin") {
-    window.location.href = "/admin-dashboard.html";
-  } else if (role === "doctor") {
-    window.location.href = "/doctor-dashboard.html";
-  } else if (role === "merchant") {
-    window.location.href = "/merchant-dashboard.html";
-  } else {
-    window.location.href = "/user-dashboard.html";
-  }
-}
+export { auth, db };
