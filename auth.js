@@ -1,21 +1,112 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// auth.js
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDyHY4bRUYd-bB-PD2V-0Yd_DXdZKWuabQ",
-  authDomain: "raghuvanshi-healthcare.firebaseapp.com",
-  projectId: "raghuvanshi-healthcare",
-  storageBucket: "raghuvanshi-healthcare.firebasestorage.app",
-  messagingSenderId: "607175735611",
-  appId: "1:607175735611:web:2b8431fc8093c691439f1e",
-  measurementId: "G-RW66WW5JKC"
-};
+// SIGN UP with Role, Email Verification, Firestore user data
+async function signUp(name, email, password, role = "user") {
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+    const uid = user.uid;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+    // Store user data in Firestore
+    await db.collection("users").doc(uid).set({
+      name,
+      email,
+      role,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Send email verification
+    await user.sendEmailVerification();
+
+    return { success: true, message: "Signup successful. Please verify your email.", uid };
+  } catch (error) {
+    console.error("Signup Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// LOGIN and fetch role
+async function login(email, password) {
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+
+    if (!user.emailVerified) {
+      return { success: false, error: "Please verify your email before logging in." };
+    }
+
+    const uid = user.uid;
+    const userDoc = await db.collection("users").doc(uid).get();
+
+    if (!userDoc.exists) {
+      return { success: false, error: "User data not found in Firestore." };
+    }
+
+    const userData = userDoc.data();
+    return { success: true, uid, role: userData.role };
+  } catch (error) {
+    console.error("Login Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// LOGOUT
+async function logout() {
+  try {
+    await auth.signOut();
+    return { success: true };
+  } catch (error) {
+    console.error("Logout Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// CHECK CURRENT USER
+function getCurrentUser() {
+  return auth.currentUser;
+}
+
+// RESET PASSWORD (email link)
+async function resetPassword(email) {
+  try {
+    await auth.sendPasswordResetEmail(email);
+    return { success: true, message: "Reset link sent to your email." };
+  } catch (error) {
+    console.error("Password Reset Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// SEND VERIFICATION EMAIL (if needed)
+async function resendVerificationEmail() {
+  const user = auth.currentUser;
+  if (user && !user.emailVerified) {
+    try {
+      await user.sendEmailVerification();
+      return { success: true, message: "Verification email sent." };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  } else {
+    return { success: false, error: "User not found or already verified." };
+  }
+}
+
+// REDIRECT BY ROLE
+async function redirectUserByRole() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userDoc = await db.collection("users").doc(user.uid).get();
+  const role = userDoc.data()?.role;
+
+  if (role === "admin") {
+    window.location.href = "/admin-dashboard.html";
+  } else if (role === "doctor") {
+    window.location.href = "/doctor-dashboard.html";
+  } else if (role === "merchant") {
+    window.location.href = "/merchant-dashboard.html";
+  } else {
+    window.location.href = "/user-dashboard.html";
+  }
+}
