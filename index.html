@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book Appointment</title>
+</head>
+<body>
+  <h2>Book a Service</h2>
+  <form id="booking-form">
+    <input required type="text" id="name" placeholder="Your Name" /><br />
+    <input required type="email" id="email" placeholder="Your Email" /><br />
+    <input required type="tel" id="phone" placeholder="Phone Number" /><br />
+    <input required type="datetime-local" id="datetime" /><br />
+
+    <select id="service" required>
+      <option value="">Select Service</option>
+      <option value="Consultation">Consultation</option>
+      <option value="Blood Test">Blood Test</option>
+      <option value="Physiotherapy">Physiotherapy</option>
+      <option value="Home Visit">Home Visit</option>
+    </select><br />
+
+    <textarea id="notes" placeholder="Additional Notes (optional)"></textarea><br />
+    <button type="submit">Book Now</button>
+    <p id="status"></p>
+  </form>
+
+  <script type="module">
+    import { getAuth, onAuthStateChanged } from "firebase/auth";
+    import { getFirestore, addDoc, collection, serverTimestamp } from "firebase/firestore";
+    import { app } from "./firebase.js";
+
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const form = document.getElementById("booking-form");
+    const status = document.getElementById("status");
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("email").value = user.email;
+      } else {
+        alert("Please log in to book an appointment.");
+        window.location.href = "/login.html";
+      }
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const bookingData = {
+        userId: currentUser.uid,
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        phone: document.getElementById("phone").value,
+        service: document.getElementById("service").value,
+        datetime: document.getElementById("datetime").value,
+        notes: document.getElementById("notes").value || "",
+        status: "pending",
+        createdAt: serverTimestamp(),
+      };
+
+      try {
+        await addDoc(collection(db, "bookings"), bookingData);
+        status.textContent = "Booking successful!";
+        form.reset();
+      } catch (error) {
+        status.textContent = "Error: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
